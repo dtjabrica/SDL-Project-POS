@@ -1,0 +1,8 @@
+
+SQL Query: INSERT INTO order_items (order_id, product_name, product_quantity, cup_size, cup_size_price, addon_name, addon_price, addon_quantity, total_item_price) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?), Parameters: [82,null,"0",null,0,"Pearl","9.00","1",9]
+SQL Query: INSERT INTO order_items (order_id, product_name, product_quantity, cup_size, cup_size_price, addon_name, addon_price, addon_quantity, total_item_price) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?), Parameters: [83,null,"0",null,0,"Box","9.00","1",9]
+SQL Query: INSERT INTO order_items (order_id, product_name, product_quantity, cup_size, cup_size_price, addon_name, addon_price, addon_quantity, total_item_price) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?), Parameters: [84,null,"0",null,0,"Box","9.00","1",9]
+SQL Query: INSERT INTO order_items (order_id, product_name, product_quantity, cup_size, cup_size_price, addon_name, addon_price, addon_quantity, total_item_price) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?), Parameters: [85,null,"0",null,0,"Box","9.00","1",9]
+SQL Query: INSERT INTO order_items (order_id, product_name, product_quantity, cup_size, cup_size_price, addon_name, addon_price, addon_quantity, total_item_price) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?), Parameters: [86,"TeaMilk","1","12oz","35.00","Box","9.00","1",44]
+SQL Query: INSERT INTO order_items (order_id, product_name, product_quantity, cup_size, cup_size_price, addon_name, addon_price, addon_quantity, total_item_price) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?), Parameters: [87,null,"0",null,0,"Box","9.00","1",9]
+SQL Query: INSERT INTO order_items (order_id, product_name, product_quantity, cup_size, cup_size_price, addon_name, addon_price, addon_quantity, total_item_price) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?), Parameters: [88,null,"0",null,0,"Box","9.00","1",9]

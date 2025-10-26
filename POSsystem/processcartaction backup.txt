@@ -1,0 +1,81 @@
+<?php
+session_start();
+include 'pos_db.php'; // Include your database connection file
+
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    if (isset($_POST['action'])) {
+        $action = $_POST['action'];
+
+        if (strpos($action, 'remove_') === 0) {
+            $itemIdToRemove = substr($action, 7); // Extract the unique ID after "remove_"
+            removeFromCart('cart', $itemIdToRemove);
+        } elseif ($action === 'checkout') {
+            processSale();
+        }
+    }
+}
+
+function removeFromCart($cartType, $itemIdToRemove) {
+    if (isset($_SESSION[$cartType])) {
+        foreach ($_SESSION[$cartType] as $key => $item) {
+            if ($key == $itemIdToRemove) {
+                unset($_SESSION[$cartType][$key]);
+                break;
+            }
+        }
+    }
+    // Redirect back to the index.php page
+    header("Location: index.php");
+    exit();
+}
+
+function processSale() {
+    global $conn;
+
+    if (isset($_SESSION['cart'])) {
+        // Create a new order
+        $stmt = $conn->prepare("INSERT INTO orders (order_date, total_price) VALUES (CURRENT_TIMESTAMP, ?)");
+        $totalOrderPrice = 0; // Initialize total order price
+        $stmt->bind_param("d", $totalOrderPrice);
+        $stmt->execute();
+        $orderId = $stmt->insert_id;
+
+        // Insert items into order_items table
+        foreach ($_SESSION['cart'] as $item) {
+            $productName = $item['product_name'];
+            $productQuantity = $item['quantity'];
+            $cupSize = $item['cup_size_name'] ?? null;
+            $cupSizePrice = $item['cup_size_price'] ?? 0;
+            $addonName = $item['addon_name'];
+            $addonQuantity = $item['addon_quantity'];
+            $addonPrice = $item['addon_price'];
+            $totalItemPrice = ($cupSizePrice * $productQuantity) + ($addonPrice * $addonQuantity);
+        
+            // Update total order price
+            $totalOrderPrice += $totalItemPrice;
+            
+            // Insert item into order_items table
+            $stmt = $conn->prepare("INSERT INTO order_items (order_id, product_name, product_quantity, addon_name, addon_price, addon_quantity, total_item_price, cup_size, cup_size_price) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+            $stmt->bind_param("isssdissd", $orderId, $productName, $productQuantity, $addonName, $addonPrice, $addonQuantity, $totalItemPrice, $cupSize, $cupSizePrice);
+            $stmt->execute();   
+        }    
+
+        // Update total order price in the orders table
+        $stmt = $conn->prepare("UPDATE orders SET total_price = ? WHERE order_id = ?");
+        $stmt->bind_param("di", $totalOrderPrice, $orderId);
+        $stmt->execute();
+
+        // Clear the cart after processing the sale
+        unset($_SESSION['cart']);
+
+        // Redirect back to index.php or display a success message
+        header("Location: index.php");
+        exit();
+    } else {
+        // Handle case where the cart is empty
+        // Redirect back to index.php or display an error message
+        header("Location: index.php");
+        exit();
+    }
+}
+?>

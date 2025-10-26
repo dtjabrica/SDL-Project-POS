@@ -1,0 +1,187 @@
+<?php
+session_start();
+include 'pos_db.php'; // Include pos_db.php here
+?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>POS System</title>
+    <link rel="stylesheet" href="bigbrew_style.css">
+</head>
+<body>
+    <h1>POS System</h1>
+    
+    <!-- Buttons to Add Product, Add Add-on, and Add Category -->
+    <div>
+        <!-- Use JavaScript to show modal popup on button click -->
+        <button onclick="openModal('add_product.php')">Add Product</button>
+        <button onclick="openModal('add_addon.php')">Add Add-on</button>
+        <button onclick="openModal('add_category.php')">Add Category</button>
+        <button onclick="openModal('add_cup_size.php')">Add Cup Size</button>
+    </div>
+
+    <!-- Modal popup for adding product/add-on/category -->
+    <div id="myModal" class="modal">
+        <div class="modal-content">
+            <!-- Close button -->
+            <span class="close" onclick="closeModal()">&times;</span>
+            <!-- Placeholder for the content loaded via AJAX -->
+            <div id="modalContent"></div>
+        </div>
+    </div>
+
+    <!-- Include jQuery library for AJAX functionality -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    
+    <script>
+        // Function to open modal and load content via AJAX
+        function openModal(url) {
+            // Show the modal
+            $('#myModal').show();
+            // Load content from URL via AJAX and insert into modalContent div
+            $('#modalContent').load(url);
+        }
+
+        // Function to close the modal
+        function closeModal() {
+            // Hide the modal
+            $('#myModal').hide();
+        }
+    </script>
+
+    <h1>Categories</h1>
+    <ul>
+        <?php
+        $result = $conn->query("SELECT * FROM categories");
+        while ($row = $result->fetch_assoc()) {
+            echo "<li><a href='index.php?category_id={$row['category_id']}'>{$row['category_name']}</a></li>";
+        }
+        ?>
+    </ul>
+
+    <h2>Products</h2>
+	<form id="addToCartForm" action="add_to_cart.php" method="POST">
+        <select name="product_id" onchange="updateAddonOptions(this); updateCupSizeOptions(this);">
+            <option value="0">Select Product</option>
+            <?php
+            $category_id = isset($_GET['category_id']) ? $_GET['category_id'] : null;
+
+            if ($category_id !== null) {
+                $sql = "SELECT * FROM products WHERE category_id = $category_id";
+            } else {
+                $sql = "SELECT * FROM products";
+            }
+
+            $result = $conn->query($sql);
+            while ($row = $result->fetch_assoc()) {
+                echo "<option value='{$row['id']}' data-price='{$row['price']}' data-category-id='{$row['category_id']}'>{$row['name']}{$row['price']}</option>"; // Modified display here
+            }
+            ?>
+        </select>
+        <input type="number" name="product_quantity" id="productQuantity" value="0" min="0">
+        <input type="hidden" name="category_id" value="<?php echo $category_id; ?>">
+
+        <h2>Cup Sizes</h2>
+        <select name="cup_size_id" id="cupSizeSelect" disabled>
+            <option value="">Select Cup Size</option>
+        </select>
+
+        <h2>Add-ons</h2>
+        <select name="addon_id" id="addonSelect">
+            <option value="">Select Add-on</option>
+            <?php
+            $addon_result = $conn->query("SELECT * FROM addons");
+            while ($addon_row = $addon_result->fetch_assoc()) {
+                echo "<option value='{$addon_row['id']}'>{$addon_row['name']} - \${$addon_row['price']}</option>";
+            }
+            ?>
+        </select>
+        <input type="number" name="addon_quantity" id="addonQuantity" value="0" min="0">
+
+        <button type="button" id="addToCartBtn">Add to Cart</button>
+    </form>
+
+<script>
+    $(document).ready(function() {
+    $('#addToCartBtn').click(function() {
+        $('#addToCartForm').submit();
+    });
+});
+
+// Function to update addon options based on selected product
+function updateAddonOptions(productSelect) {
+    var selectedOption = productSelect.options[productSelect.selectedIndex];
+    var addonSelect = document.getElementById('addonSelect');
+    var addonQuantityInput = document.getElementById('addonQuantity');
+
+    addonSelect.disabled = false;
+    addonQuantityInput.disabled = false;
+
+    if (selectedOption.value !== '') {
+        addonQuantityInput.value = 0;
+    }
+}
+
+// Function to update cup size options based on selected product
+function updateCupSizeOptions(productSelect) {
+    var selectedOption = productSelect.options[productSelect.selectedIndex];
+    var cupSizeSelect = document.getElementById('cupSizeSelect');
+
+    // Enable cup size select
+    cupSizeSelect.disabled = false;
+
+    if (selectedOption.value !== '') {
+        var categoryId = selectedOption.getAttribute('data-category-id');
+        fetchCupSizes(categoryId);
+    }
+}
+
+// Function to fetch cup sizes via AJAX
+function fetchCupSizes(categoryId) {
+    $.ajax({
+        url: 'get_cup_sizes.php',
+        method: 'GET',
+        data: { category_id: categoryId },
+        success: function(response) {
+            $('#cupSizeSelect').html(response);
+        }
+    });
+}
+</script>
+
+<h1>Cart</h1>
+<form action="process_cart_action.php" method="POST">
+    <ul>
+        <?php
+        $total_price = 0; // Initialize total price
+        if (isset($_SESSION['cart'])) {
+            foreach ($_SESSION['cart'] as $unique_id => $item) {
+                echo "<li>";
+                if (isset($item['product_name']) && isset($item['quantity'])) {
+                    echo "<img src='{$item['product_image']}' alt='Product Image' style='max-width: 100px; max-height: 100px;'>"; // Display product image
+                    echo "Product: " . $item['product_name'] . " - Quantity: " . $item['quantity'] . "<br>";
+                }
+                if (isset($item['addon_name'])) {
+                    echo "<img src='{$item['addon_image']}' alt='Addon Image' style='max-width: 100px; max-height: 100px;'>"; // Display addon image
+                    echo "Addon: " . $item['addon_name'] . " - Quantity: " . $item['addon_quantity'] . " - Price: $" . $item['addon_price'] . "<br>";
+                    $total_price += $item['addon_price'] * $item['addon_quantity']; // Add addon price to total
+                }
+                // Check if cup size, cup size name, and cup size price are set
+                if (isset($item['cup_size_name']) && isset($item['cup_size_price'])) {
+                    echo "Cup Size: " . $item['cup_size_name'] . " - Price: $" . $item['cup_size_price'] . "<br>";
+                    $total_price += $item['cup_size_price']; // Add cup size price to total
+                }
+                echo "<button type='submit' name='action' value='remove_" . $unique_id . "'>Remove from Cart</button>";
+                echo "</li>";
+            }            
+        }
+        ?>
+    </ul>
+    <h2>Total Price: $<?php echo number_format($total_price, 2); ?></h2> <!-- Display total price -->
+    <button type="submit" name="action" value="checkout">Proceed to Checkout</button>
+</form>
+
+
+</body>
+</html>
